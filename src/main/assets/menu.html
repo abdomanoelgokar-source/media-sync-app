@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>صانع منيو الكافيهات</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, sans-serif;
+      background: #0b0f17;
+      color: #f3f4f6;
+      padding: 16px;
+    }
+    .container { max-width: 780px; margin: 0 auto; }
+    .header {
+      background: #131a26;
+      border: 1px solid #1f2937;
+      border-radius: 14px;
+      padding: 16px;
+      margin-bottom: 16px;
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+    }
+    .header h1 { margin: 0; font-size: 1.2rem; }
+    .cafe-name-input {
+      background: #0b0f17;
+      color: #f9fafb;
+      border: 1px solid #374151;
+      border-radius: 8px;
+      padding: 8px 12px;
+      font-size: 0.95rem;
+      min-width: 200px;
+    }
+    .card {
+      background: #131a26;
+      border: 1px solid #1f2937;
+      border-radius: 14px;
+      padding: 16px;
+      margin-bottom: 16px;
+    }
+    .card h2 { margin: 0 0 12px; font-size: 1.05rem; }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 10px;
+    }
+    input, select, textarea {
+      width: 100%;
+      background: #0b0f17;
+      color: #f9fafb;
+      border: 1px solid #374151;
+      border-radius: 8px;
+      padding: 10px;
+      font-size: 0.92rem;
+      font-family: inherit;
+    }
+    textarea { grid-column: 1 / -1; resize: vertical; min-height: 60px; }
+    .btn {
+      border: 0;
+      border-radius: 9px;
+      padding: 10px 14px;
+      font-weight: 700;
+      cursor: pointer;
+      font-size: 0.9rem;
+    }
+    .btn-add { background: #2563eb; color: #fff; margin-top: 12px; width: 100%; }
+    .btn-print { background: #16a34a; color: #fff; }
+    .btn-reset { background: #374151; color: #f3f4f6; }
+    .btn-del { background: #dc2626; color: #fff; padding: 6px 10px; font-size: 0.8rem; }
+    .filters { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
+    .filter-btn {
+      background: #1f2937;
+      color: #d1d5db;
+      border: 1px solid #374151;
+      border-radius: 20px;
+      padding: 6px 12px;
+      cursor: pointer;
+      font-size: 0.85rem;
+    }
+    .filter-btn.active { background: #2563eb; color: #fff; border-color: #2563eb; }
+    .menu-preview {
+      background: #111827;
+      border: 1px solid #263244;
+      border-radius: 14px;
+      padding: 20px;
+    }
+    .menu-title {
+      text-align: center;
+      font-size: 1.35rem;
+      font-weight: 800;
+      margin: 0 0 16px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid #263244;
+    }
+    .section-block { margin-bottom: 18px; }
+    .section-title { font-size: 1rem; color: #60a5fa; margin: 0 0 8px; font-weight: 700; }
+    .item-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 12px;
+      padding: 10px 0;
+      border-bottom: 1px dashed #243042;
+    }
+    .item-name { font-weight: 700; font-size: 0.98rem; }
+    .item-desc { color: #9ca3af; font-size: 0.84rem; margin-top: 3px; }
+    .item-right { display: flex; align-items: center; gap: 10px; white-space: nowrap; }
+    .item-price { font-weight: 700; color: #4ade80; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>صانع منيو الكافيهات</h1>
+      <input id="cafeName" class="cafe-name-input" type="text" placeholder="اسم الكافيه..." />
+      <div style="display:flex; gap:8px;">
+        <button class="btn btn-print" onclick="window.print()">طباعة / PDF</button>
+        <button class="btn btn-reset" id="resetSampleBtn">أصناف تجريبية</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>إضافة صنف جديد</h2>
+      <div class="grid">
+        <input id="itemName" type="text" placeholder="اسم الصنف (مثال: لاتيه)" />
+        <input id="itemPrice" type="number" step="0.5" min="0" placeholder="السعر" />
+        <select id="itemCategory">
+          <option value="مشروبات ساخنة">مشروبات ساخنة</option>
+          <option value="مشروبات باردة">مشروبات باردة</option>
+          <option value="حلويات">حلويات</option>
+          <option value="سناكس">سناكس</option>
+        </select>
+        <textarea id="itemDesc" placeholder="وصف مختصر (اختياري)"></textarea>
+      </div>
+      <button class="btn btn-add" id="addItemBtn">+ إضافة إلى المنيو</button>
+    </div>
+
+    <div class="card">
+      <div class="filters" id="filtersBar"></div>
+      <div class="menu-preview">
+        <div class="menu-title" id="previewCafeName">منيو الكافيه</div>
+        <div id="menuSections"></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const STORAGE_KEY = "cafe_menu_builder_v1";
+    const categories = ["الكل", "مشروبات ساخنة", "مشروبات باردة", "حلويات", "سناكس"];
+    let activeFilter = "الكل";
+
+    const sampleData = {
+      cafeName: "كافيه النخبة",
+      items: [
+        { id: 1, name: "إسبريسو", price: "45", category: "مشروبات ساخنة", desc: "جرعة قهوة مركزة" },
+        { id: 2, name: "آيس لاتيه", price: "75", category: "مشروبات باردة", desc: "إسبريسو مع حليب بارد وثلج" },
+        { id: 3, name: "تشيز كيك", price: "90", category: "حلويات", desc: "طبقة كريمية غنية" }
+      ]
+    };
+
+    let state = loadState();
+
+    function loadState() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (raw) return JSON.parse(raw);
+      } catch {}
+      return JSON.parse(JSON.stringify(sampleData));
+    }
+
+    function saveState() {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    }
+
+    const cafeNameInput = document.getElementById("cafeName");
+    const previewCafeName = document.getElementById("previewCafeName");
+    const itemNameInput = document.getElementById("itemName");
+    const itemPriceInput = document.getElementById("itemPrice");
+    const itemCategoryInput = document.getElementById("itemCategory");
+    const itemDescInput = document.getElementById("itemDesc");
+    const addItemBtn = document.getElementById("addItemBtn");
+    const filtersBar = document.getElementById("filtersBar");
+    const menuSections = document.getElementById("menuSections");
+    const resetSampleBtn = document.getElementById("resetSampleBtn");
+
+    function renderFilters() {
+      filtersBar.innerHTML = "";
+      categories.forEach((cat) => {
+        const btn = document.createElement("button");
+        btn.className = "filter-btn" + (activeFilter === cat ? " active" : "");
+        btn.textContent = cat;
+        btn.onclick = () => {
+          activeFilter = cat;
+          renderFilters();
+          renderMenu();
+        };
+        filtersBar.appendChild(btn);
+      });
+    }
+
+    function renderMenu() {
+      cafeNameInput.value = state.cafeName;
+      previewCafeName.textContent = state.cafeName.trim() || "منيو الكافيه";
+
+      const filtered = state.items.filter(
+        (it) => activeFilter === "الكل" || it.category === activeFilter
+      );
+
+      const grouped = {};
+      filtered.forEach((it) => {
+        if (!grouped[it.category]) grouped[it.category] = [];
+        grouped[it.category].push(it);
+      });
+
+      menuSections.innerHTML = "";
+      const secKeys = Object.keys(grouped);
+      if (!secKeys.length) {
+        menuSections.innerHTML = `<p style="text-align:center; color:#9ca3af;">لا توجد أصناف في هذا القسم.</p>`;
+        return;
+      }
+
+      secKeys.forEach((sec) => {
+        const block = document.createElement("div");
+        block.className = "section-block";
+
+        const heading = document.createElement("div");
+        heading.className = "section-title";
+        heading.textContent = sec;
+        block.appendChild(heading);
+
+        grouped[sec].forEach((it) => {
+          const row = document.createElement("div");
+          row.className = "item-row";
+
+          const left = document.createElement("div");
+          left.innerHTML = `<div class="item-name">${escapeHtml(it.name)}</div>${
+            it.desc ? `<div class="item-desc">${escapeHtml(it.desc)}</div>` : ""
+          }`;
+
+          const right = document.createElement("div");
+          right.className = "item-right";
+
+          const price = document.createElement("span");
+          price.className = "item-price";
+          price.textContent = `${it.price} ج.م`;
+
+          const delBtn = document.createElement("button");
+          delBtn.className = "btn btn-del";
+          delBtn.textContent = "حذف";
+          delBtn.onclick = () => {
+            state.items = state.items.filter((x) => x.id !== it.id);
+            saveState();
+            renderMenu();
+          };
+
+          right.appendChild(price);
+          right.appendChild(delBtn);
+          row.appendChild(left);
+          row.appendChild(right);
+          block.appendChild(row);
+        });
+
+        menuSections.appendChild(block);
+      });
+    }
+
+    function escapeHtml(str) {
+      return String(str)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;");
+    }
+
+    cafeNameInput.addEventListener("input", (e) => {
+      state.cafeName = e.target.value;
+      saveState();
+      previewCafeName.textContent = state.cafeName.trim() || "منيو الكافيه";
+    });
+
+    addItemBtn.addEventListener("click", () => {
+      const name = itemNameInput.value.trim();
+      const price = itemPriceInput.value.trim();
+      const category = itemCategoryInput.value;
+      const desc = itemDescInput.value.trim();
+      if (!name || !price) return;
+
+      state.items.push({ id: Date.now(), name, price, category, desc });
+      itemNameInput.value = "";
+      itemPriceInput.value = "";
+      itemDescInput.value = "";
+      saveState();
+      renderMenu();
+    });
+
+    resetSampleBtn.addEventListener("click", () => {
+      state = JSON.parse(JSON.stringify(sampleData));
+      saveState();
+      renderMenu();
+    });
+
+    renderFilters();
+    renderMenu();
+  </script>
+</body>
+</html>
